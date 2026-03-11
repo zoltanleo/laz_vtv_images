@@ -42,6 +42,7 @@ type
       Column: TColumnIndex; TextType: TVSTTextType; var CellText: String);
   private
     FCurrentImgList: TImageList;
+    FShowCounter: SizeInt;
     procedure TreeGetImageIndex(Sender: TBaseVirtualTree; Node: PVirtualNode;
       Kind: TVTImageKind; Column: TColumnIndex; var Ghosted: Boolean;
       var ImageIndex: Integer);
@@ -51,6 +52,7 @@ type
   );
   public
     property CurrentImgList: TImageList read FCurrentImgList;
+    property ShowCounter: SizeInt read FShowCounter;
   end;
 
 var
@@ -95,6 +97,9 @@ procedure TForm1.TreeGetImageIndex(Sender: TBaseVirtualTree;
 var
   Data: PMyRec = nil;
 begin
+  if  (ShowCounter = 0) then ShowMessage('we are inside TreeGetImageIndex procedure');
+  Inc(FShowCounter);
+
   Data:= vst.GetNodeData(Node);
   if not Assigned(Data) then Exit;
 
@@ -108,6 +113,9 @@ procedure TForm1.TreeGetImageIndexEx(Sender: TBaseVirtualTree;
 var
   Data: PMyRec = nil;
 begin
+  if  (ShowCounter = 0) then ShowMessage('we are inside TreeGetImageIndexEx procedure');
+  Inc(FShowCounter);
+
   Data:= vst.GetNodeData(Node);
   if not Assigned(Data) then Exit;
 
@@ -117,6 +125,8 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
+  FShowCounter:= 0;
+
   with RadioGroup1 do
   begin
     ItemIndex:= 0;
@@ -232,6 +242,8 @@ end;
 
 procedure TForm1.RadioGroup1Click(Sender: TObject);
 begin
+  FShowCounter:= 0;
+
   case RadioGroup1.ItemIndex of
     0: FCurrentImgList:= imgList_16;
     1: FCurrentImgList:= imgList_24;
@@ -244,10 +256,12 @@ begin
       begin
         vst.Images:= FCurrentImgList;
         vst.OnGetImageIndex:= @TreeGetImageIndex;
+        vst.OnGetImageIndexEx:= nil;
       end;
     1:
       begin
         vst.Images:= nil;
+        vst.OnGetImageIndex:= nil;
         vst.OnGetImageIndexEx:= @TreeGetImageIndexEx;
       end
   else ;
