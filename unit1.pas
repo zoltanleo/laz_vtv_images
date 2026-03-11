@@ -21,6 +21,9 @@ type
   TForm1 = class(TForm)
     Button1: TButton;
     CheckBox1: TCheckBox;
+    imgList_24w: TImageList;
+    imgList_32w: TImageList;
+    imgList_16w: TImageList;
     imgList_32: TImageList;
     imgList_16: TImageList;
     imgList_24: TImageList;
@@ -97,13 +100,14 @@ procedure TForm1.TreeGetImageIndex(Sender: TBaseVirtualTree;
 var
   Data: PMyRec = nil;
 begin
-  if  (ShowCounter = 0) then ShowMessage('we are inside TreeGetImageIndex procedure');
+  //if  (ShowCounter = 0) then ShowMessage('we are inside TreeGetImageIndex procedure');
   Inc(FShowCounter);
 
   Data:= vst.GetNodeData(Node);
   if not Assigned(Data) then Exit;
 
   ImageIndex:= PtrInt(Data^.BoolVal);
+  Ghosted:= not Data^.BoolVal;
 end;
 
 procedure TForm1.TreeGetImageIndexEx(Sender: TBaseVirtualTree;
@@ -113,13 +117,22 @@ procedure TForm1.TreeGetImageIndexEx(Sender: TBaseVirtualTree;
 var
   Data: PMyRec = nil;
 begin
-  if  (ShowCounter = 0) then ShowMessage('we are inside TreeGetImageIndexEx procedure');
+  //if  (ShowCounter = 0) then ShowMessage('we are inside TreeGetImageIndexEx procedure');
   Inc(FShowCounter);
 
   Data:= vst.GetNodeData(Node);
   if not Assigned(Data) then Exit;
 
-  ImageList:= FCurrentImgList;
+  if Data^.BoolVal
+    then ImageList:= FCurrentImgList
+    else
+      case RadioGroup1.ItemIndex of
+        0: ImageList:= imgList_16w;
+        1: ImageList:= imgList_24w;
+      else
+        ImageList:= imgList_32w;
+      end;
+
   ImageIndex:= PtrInt(Data^.BoolVal);
 end;
 
@@ -153,6 +166,7 @@ begin
     HintMode := hmTooltip;
     ShowHint := True;
     //OnGetImageIndex:= @TreeGetImageIndex;
+    //Images:= imgList_32;
     //OnGetImageIndexEx:= @TreeGetImageIndexEx;
 
     with Header do
@@ -251,6 +265,9 @@ begin
     FCurrentImgList:= imgList_32;
   end;
 
+    vst.Invalidate;
+  //Exit;
+
   case RadioGroup2.ItemIndex of
     0:
       begin
@@ -260,13 +277,16 @@ begin
       end;
     1:
       begin
-        vst.Images:= nil;
+        vst.Images:= imgList_16;
         vst.OnGetImageIndex:= nil;
         vst.OnGetImageIndexEx:= @TreeGetImageIndexEx;
+        vst.Invalidate;
       end
   else ;
   end;
 
+  //vst.Invalidate;
+  //vst.Repaint;
 end;
 
 procedure TForm1.vstAddToSelection(Sender: TBaseVirtualTree; Node: PVirtualNode
