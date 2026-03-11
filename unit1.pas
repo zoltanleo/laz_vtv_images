@@ -27,6 +27,7 @@ type
     Label1: TLabel;
     Label2: TLabel;
     RadioGroup1: TRadioGroup;
+    RadioGroup2: TRadioGroup;
     vst: TLazVirtualStringTree;
     procedure Button1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -44,6 +45,10 @@ type
     procedure TreeGetImageIndex(Sender: TBaseVirtualTree; Node: PVirtualNode;
       Kind: TVTImageKind; Column: TColumnIndex; var Ghosted: Boolean;
       var ImageIndex: Integer);
+    procedure TreeGetImageIndexEx(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; Kind: TVTImageKind; Column: TColumnIndex;
+  var Ghosted: Boolean; var ImageIndex: Integer; var ImageList: TCustomImageList
+  );
   public
     property CurrentImgList: TImageList read FCurrentImgList;
   end;
@@ -93,32 +98,52 @@ begin
   Data:= vst.GetNodeData(Node);
   if not Assigned(Data) then Exit;
 
-  Kind:= ikNormal;
-
-  //ImageList:= FCurrentImgList;
-
   ImageIndex:= PtrInt(Data^.BoolVal);
-  Kind:= ikOverlay;
-  Ghosted:= True;
+end;
+
+procedure TForm1.TreeGetImageIndexEx(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; Kind: TVTImageKind; Column: TColumnIndex;
+  var Ghosted: Boolean; var ImageIndex: Integer; var ImageList: TCustomImageList
+  );
+var
+  Data: PMyRec = nil;
+begin
+  Data:= vst.GetNodeData(Node);
+  if not Assigned(Data) then Exit;
+
+  ImageList:= FCurrentImgList;
+  ImageIndex:= PtrInt(Data^.BoolVal);
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  RadioGroup1.ItemIndex:= 0;
-  RadioGroup1.Columns:= RadioGroup1.Items.Count;
-  RadioGroup1.AutoSize:= True;
-  RadioGroup1.ChildSizing.TopBottomSpacing:= 10;
-  RadioGroup1.ChildSizing.LeftRightSpacing:= 10;
+  with RadioGroup1 do
+  begin
+    ItemIndex:= 0;
+    Columns:= Items.Count;
+    AutoSize:= True;
+    ChildSizing.TopBottomSpacing:= 10;
+    ChildSizing.LeftRightSpacing:= 10;
+  end;
+
+  with RadioGroup2 do
+  begin
+    ItemIndex:= 0;
+    Columns:= Items.Count;
+    AutoSize:= True;
+    ChildSizing.TopBottomSpacing:= 10;
+    ChildSizing.LeftRightSpacing:= 10;
+    OnClick:= @RadioGroup1Click;
+  end;
 
   FCurrentImgList:= imgList_16;
 
   with vst do
   begin
-    //Images:= imgList_16;
     HintMode := hmTooltip;
     ShowHint := True;
-    //DefaultNodeHeight := Canvas.TextHeight('W') * 3 div 2;
-    OnGetImageIndex:= @TreeGetImageIndex;
+    //OnGetImageIndex:= @TreeGetImageIndex;
+    //OnGetImageIndexEx:= @TreeGetImageIndexEx;
 
     with Header do
     begin
@@ -193,7 +218,7 @@ var
   i: Integer;
 begin
   RadioGroup1Click(Sender);
-  //vst.Images:= imgList_16 ;
+
   vst.Clear;
   for i := 0 to Pred(8) do
   begin
@@ -208,11 +233,26 @@ end;
 procedure TForm1.RadioGroup1Click(Sender: TObject);
 begin
   case RadioGroup1.ItemIndex of
-    0: vst.Images:= imgList_16;
-    1: vst.Images:= imgList_24;
+    0: FCurrentImgList:= imgList_16;
+    1: FCurrentImgList:= imgList_24;
   else
-    vst.Images:= imgList_32;
+    FCurrentImgList:= imgList_32;
   end;
+
+  case RadioGroup2.ItemIndex of
+    0:
+      begin
+        vst.Images:= FCurrentImgList;
+        vst.OnGetImageIndex:= @TreeGetImageIndex;
+      end;
+    1:
+      begin
+        vst.Images:= nil;
+        vst.OnGetImageIndexEx:= @TreeGetImageIndexEx;
+      end
+  else ;
+  end;
+
 end;
 
 procedure TForm1.vstAddToSelection(Sender: TBaseVirtualTree; Node: PVirtualNode
