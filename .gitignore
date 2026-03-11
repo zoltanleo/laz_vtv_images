@@ -1,0 +1,6 @@
+*.exe
+*.*_
+/release
+/lib
+/jsontools.pas_
+/debug
