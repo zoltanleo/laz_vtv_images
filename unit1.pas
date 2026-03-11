@@ -21,6 +21,7 @@ type
   TForm1 = class(TForm)
     Button1: TButton;
     CheckBox1: TCheckBox;
+    CheckBox2: TCheckBox;
     imgList_24w: TImageList;
     imgList_32w: TImageList;
     imgList_16w: TImageList;
@@ -33,6 +34,7 @@ type
     RadioGroup2: TRadioGroup;
     vst: TLazVirtualStringTree;
     procedure Button1Click(Sender: TObject);
+    procedure CheckBox2Change(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure RadioGroup1Click(Sender: TObject);
@@ -45,6 +47,7 @@ type
       Column: TColumnIndex; TextType: TVSTTextType; var CellText: String);
   private
     FCurrentImgList: TImageList;
+    FInitNodeHeight: SizeInt;
     FShowCounter: SizeInt;
     procedure TreeGetImageIndex(Sender: TBaseVirtualTree; Node: PVirtualNode;
       Kind: TVTImageKind; Column: TColumnIndex; var Ghosted: Boolean;
@@ -53,15 +56,20 @@ type
   Node: PVirtualNode; Kind: TVTImageKind; Column: TColumnIndex;
   var Ghosted: Boolean; var ImageIndex: Integer; var ImageList: TCustomImageList
   );
+    procedure TreeMeasureItem(Sender: TBaseVirtualTree;
+  TargetCanvas: TCanvas; Node: PVirtualNode; var NodeHeight: Integer);
   public
     property CurrentImgList: TImageList read FCurrentImgList;
     property ShowCounter: SizeInt read FShowCounter;
+    property InitNodeHeight: SizeInt read FInitNodeHeight;
   end;
 
 var
   Form1: TForm1;
 
 implementation
+
+uses Math;
 
 {$R *.lfm}
 
@@ -134,6 +142,30 @@ begin
       end;
 
   ImageIndex:= PtrInt(Data^.BoolVal);
+end;
+
+procedure TForm1.TreeMeasureItem(Sender: TBaseVirtualTree;
+  TargetCanvas: TCanvas; Node: PVirtualNode; var NodeHeight: Integer);
+var
+  Data: PMyRec;
+  ImgHeight: Integer;
+  TextHeight: Integer;
+begin
+  Data := vst.GetNodeData(Node);
+  if not Assigned(Data) then Exit;
+
+  // Получаем высоту изображения из текущего ImageList
+  if Assigned(vst.Images)
+  then
+    ImgHeight := vst.Images.Height
+  else
+    ImgHeight := InitNodeHeight; // Значение по умолчанию
+
+  // Получаем высоту текста
+  TextHeight := TargetCanvas.TextHeight('Wg');
+
+  // Выбираем максимальное значение + отступы
+  NodeHeight := Max(ImgHeight, TextHeight) + 4;//uses math
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
@@ -212,8 +244,6 @@ begin
                       , toAlwaysSelectNode]
                     - [toMultiSelect];
     end;
-
-    //OnDblClick := @actChoiceExecute;
   end;
 end;
 
@@ -235,12 +265,28 @@ begin
 
 end;
 
+procedure TForm1.CheckBox2Change(Sender: TObject);
+begin
+  if CheckBox2.Checked then
+  begin
+    vst.TreeOptions.MiscOptions:= vst.TreeOptions.MiscOptions + [toVariableNodeHeight];
+    vst.OnMeasureItem:= @TreeMeasureItem;
+  end else
+  begin
+    vst.TreeOptions.MiscOptions:= vst.TreeOptions.MiscOptions - [toVariableNodeHeight];
+    vst.OnMeasureItem:= nil;
+  end;
+
+  RadioGroup1Click(Sender);
+end;
+
 procedure TForm1.FormShow(Sender: TObject);
 var
   Node: PVirtualNode = nil;
   Data: PMyRec = nil;
   i: Integer;
 begin
+  FInitNodeHeight:= vst.DefaultNodeHeight;
   RadioGroup1Click(Sender);
 
   vst.Clear;
@@ -255,6 +301,8 @@ begin
 end;
 
 procedure TForm1.RadioGroup1Click(Sender: TObject);
+var
+  Node: PVirtualNode = nil;
 begin
   FShowCounter:= 0;
 
@@ -265,28 +313,34 @@ begin
     FCurrentImgList:= imgList_32;
   end;
 
-    vst.Invalidate;
-  //Exit;
+  vst.Images:= CurrentImgList;
 
   case RadioGroup2.ItemIndex of
     0:
       begin
-        vst.Images:= FCurrentImgList;
         vst.OnGetImageIndex:= @TreeGetImageIndex;
         vst.OnGetImageIndexEx:= nil;
       end;
     1:
       begin
-        vst.Images:= imgList_16;
         vst.OnGetImageIndex:= nil;
         vst.OnGetImageIndexEx:= @TreeGetImageIndexEx;
-        vst.Invalidate;
       end
   else ;
   end;
 
-  //vst.Invalidate;
-  //vst.Repaint;
+  vst.BeginUpdate;
+  try
+    // Reinitialize all nodes for height recalculation
+    Node := vst.GetFirst;
+    while Assigned(Node) do
+    begin
+      vst.ReinitNode(Node, True);
+      Node:= Node^.NextSibling;
+    end;
+  finally
+    vst.EndUpdate;
+  end;
 end;
 
 procedure TForm1.vstAddToSelection(Sender: TBaseVirtualTree; Node: PVirtualNode

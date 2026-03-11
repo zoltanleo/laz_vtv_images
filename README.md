@@ -2,6 +2,8 @@
 
 A test project to study how VST works with pictures. Stages of development (in reverse order):
 
+![](pict/vtv_img_05.gif)
+
 ![](pict/vtv_img_04.gif)
 
 ![](pict/vtv_img_03.gif)

@@ -144,6 +144,20 @@ object Form1: TForm1
     )
     TabOrder = 4
   end
+  object CheckBox2: TCheckBox
+    AnchorSideLeft.Control = Label1
+    AnchorSideTop.Control = RadioGroup1
+    AnchorSideTop.Side = asrBottom
+    Left = 270
+    Height = 24
+    Top = 342
+    Width = 143
+    BorderSpacing.Top = 10
+    BorderSpacing.Bottom = 10
+    Caption = 'Node Auto Height'
+    TabOrder = 5
+    OnChange = CheckBox2Change
+  end
   object imgList_24: TImageList
     Height = 24
     Width = 24
