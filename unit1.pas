@@ -14,6 +14,7 @@ type
     StrVal: String;
     ImgIndex: SizeInt;
     BoolVal: Boolean;
+    StrHint: String;
   end;
 
   { TForm1 }
@@ -22,6 +23,7 @@ type
     Button1: TButton;
     CheckBox1: TCheckBox;
     CheckBox2: TCheckBox;
+    CheckBox3: TCheckBox;
     imgList_24w: TImageList;
     imgList_32w: TImageList;
     imgList_16w: TImageList;
@@ -30,11 +32,13 @@ type
     imgList_24: TImageList;
     Label1: TLabel;
     Label2: TLabel;
+    Label3: TLabel;
     RadioGroup1: TRadioGroup;
     RadioGroup2: TRadioGroup;
     vst: TLazVirtualStringTree;
     procedure Button1Click(Sender: TObject);
     procedure CheckBox2Change(Sender: TObject);
+    procedure CheckBox3Change(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure RadioGroup1Click(Sender: TObject);
@@ -58,6 +62,9 @@ type
   );
     procedure TreeMeasureItem(Sender: TBaseVirtualTree;
   TargetCanvas: TCanvas; Node: PVirtualNode; var NodeHeight: Integer);
+    procedure TreeGetHint(Sender: TBaseVirtualTree; Node: PVirtualNode;
+  Column: TColumnIndex; var LineBreakStyle: TVTTooltipLineBreakStyle;
+  var HintText: String);
   public
     property CurrentImgList: TImageList read FCurrentImgList;
     property ShowCounter: SizeInt read FShowCounter;
@@ -115,7 +122,7 @@ begin
   if not Assigned(Data) then Exit;
 
   ImageIndex:= PtrInt(Data^.BoolVal);
-  Ghosted:= not Data^.BoolVal;
+  //Ghosted:= not Data^.BoolVal;
 end;
 
 procedure TForm1.TreeGetImageIndexEx(Sender: TBaseVirtualTree;
@@ -154,18 +161,32 @@ begin
   Data := vst.GetNodeData(Node);
   if not Assigned(Data) then Exit;
 
-  // Получаем высоту изображения из текущего ImageList
+  // Getting the height of the image from the current ImageList
   if Assigned(vst.Images)
   then
     ImgHeight := vst.Images.Height
   else
-    ImgHeight := InitNodeHeight; // Значение по умолчанию
+    ImgHeight := InitNodeHeight; // Default value
 
-  // Получаем высоту текста
+  // Getting the height of the text
   TextHeight := TargetCanvas.TextHeight('Wg');
 
-  // Выбираем максимальное значение + отступы
+  // Choosing the maximum value + margins
   NodeHeight := Max(ImgHeight, TextHeight) + 4;//uses math
+end;
+
+procedure TForm1.TreeGetHint(Sender: TBaseVirtualTree; Node: PVirtualNode;
+  Column: TColumnIndex; var LineBreakStyle: TVTTooltipLineBreakStyle;
+  var HintText: String);
+var
+  Data: PMyRec = nil;
+begin
+  Data := vst.GetNodeData(Node);
+  if (Assigned(Data) and (Data^.StrHint <> ''))
+    then HintText:= Data^.StrHint
+    else HintText:= 'Value StrHint field is empty';
+
+  LineBreakStyle := hlbDefault;
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
@@ -195,11 +216,11 @@ begin
 
   with vst do
   begin
-    HintMode := hmTooltip;
     ShowHint := True;
-    //OnGetImageIndex:= @TreeGetImageIndex;
-    //Images:= imgList_32;
-    //OnGetImageIndexEx:= @TreeGetImageIndexEx;
+    Application.HintPause := 500;    // Delay before showing (ms)
+    Application.HintHidePause := 2500; // Display time (ms)
+    Application.HintShortPause := 50;  // Delay between prompts
+
 
     with Header do
     begin
@@ -280,6 +301,32 @@ begin
   RadioGroup1Click(Sender);
 end;
 
+procedure TForm1.CheckBox3Change(Sender: TObject);
+var
+  Node: PVirtualNode = nil;
+begin
+  case CheckBox3.Checked of
+    True:
+      begin
+        vst.HintMode := hmHintAndDefault;
+        vst.OnGetHint:= @TreeGetHint;
+      end;
+  else
+    begin
+      vst.HintMode := hmTooltip;
+      vst.OnGetHint:= nil;
+    end;
+  end;
+
+  Node:= vst.GetFirst;
+
+  while Assigned(Node) do
+  begin
+    vst.ReinitNode(Node,True);
+    Node:= Node^.NextSibling;
+  end;
+end;
+
 procedure TForm1.FormShow(Sender: TObject);
 var
   Node: PVirtualNode = nil;
@@ -288,6 +335,7 @@ var
 begin
   FInitNodeHeight:= vst.DefaultNodeHeight;
   RadioGroup1Click(Sender);
+  CheckBox3Change(Sender);
 
   vst.Clear;
   for i := 0 to Pred(8) do
@@ -297,6 +345,7 @@ begin
     Data^.StrVal:= 'some string ' + IntToStr(Succ(i));
     Data^.ImgIndex:= 0;
     Data^.BoolVal:= ((Succ(i) mod 2) = 0);
+    Data^.StrHint:= Format('This line contains a hint for the %s string',[Data^.StrVal]) ;
   end;
 end;
 
@@ -352,6 +401,7 @@ begin
 
   Label1.Caption:= Format('StrVal: %s',[Data^.StrVal]);
   Label2.Caption:= Format('ImgIndex: %d',[Data^.ImgIndex]);
+  Label3.Caption:= Format('StrHint: %s',[Data^.StrHint]);
   CheckBox1.Checked:= Data^.BoolVal;
 end;
 
